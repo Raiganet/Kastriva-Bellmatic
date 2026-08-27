@@ -81,6 +81,8 @@ export class SchedulerService {
       .and((s) => s.date === dateStr && s.time === timeStr)
       .toArray();
 
+    console.log('[Scheduler] Special schedules found:', specials.length);
+
     for (const spec of specials) {
       const key = `${dateStr}|${spec.time}|${spec.id}`;
       const exists = await db.executed.get(key);
@@ -88,17 +90,39 @@ export class SchedulerService {
         console.log('[Scheduler] Special already executed:', key);
         continue;
       }
+      console.log('[Scheduler] Playing special:', spec.name);
       await this.runBell(spec, spec.name, dateStr, timeStr, key);
       if (spec.overrideNormal) return;
     }
 
-    // Jadwal normal
-    const schedules = await db.schedules
+    // Jadwal normal - ambil semua jadwal enabled
+    const allSchedules = await db.schedules
       .where('enabled').equals(1)
       .toArray();
 
-    const candidates = schedules
-      .filter((s) => s.days.includes(dayKey) && s.time === timeStr)
+    console.log('[Scheduler] Total enabled schedules:', allSchedules.length);
+    
+    // Log semua jadwal untuk debug
+    allSchedules.forEach(s => {
+      console.log('[Scheduler] Schedule:', {
+        id: s.id,
+        name: s.name,
+        days: s.days,
+        time: s.time,
+        enabled: s.enabled,
+        matchesDay: s.days.includes(dayKey),
+        matchesTime: s.time === timeStr
+      });
+    });
+
+    // Filter jadwal yang match hari dan waktu
+    const candidates = allSchedules
+      .filter((s) => {
+        const dayMatch = s.days.includes(dayKey);
+        const timeMatch = s.time === timeStr;
+        console.log('[Scheduler] Checking schedule:', s.name, '- Day match:', dayMatch, 'Time match:', timeMatch);
+        return dayMatch && timeMatch;
+      })
       .sort((a, b) => b.priority - a.priority);
 
     console.log('[Scheduler] Candidates for', timeStr, ':', candidates.length);
@@ -110,6 +134,7 @@ export class SchedulerService {
         console.log('[Scheduler] Already executed:', key);
         continue;
       }
+      console.log('[Scheduler] Playing schedule:', sch.name);
       await this.runBell(sch, sch.name, dateStr, timeStr, key);
     }
   }
@@ -155,7 +180,7 @@ export class SchedulerService {
       const log: BellLog = { ...logBase, id: uid(), status: 'success' };
       await db.logs.add(log);
       
-      notify(` ${name} dimainkan`, 'success');
+      notify(`🔔 ${name} dimainkan`, 'success');
       
       el.addEventListener('ended', () => {
         console.log('[Scheduler] Bell finished:', name);
@@ -173,6 +198,51 @@ export class SchedulerService {
       await db.executed.put({ key, executedAt: Date.now() });
       notify(`❌ BEL GAGAL: ${name} - ${err?.message || 'error'}`, 'error');
     }
+  }
+
+  // Manual trigger untuk testing
+  async forcePlayNext() {
+    console.log('[Scheduler] Force play next bell');
+    const now = new Date();
+    const dateStr = toISODate(now);
+    const dayKey = dayOfWeekToKey(now);
+    
+    const schedules = await db.schedules
+      .where('enabled').equals(1)
+      .toArray();
+    
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    
+    const nextSchedule = schedules
+      .filter((s) => s.days.includes(dayKey))
+      .sort((a, b) => {
+        const [ah, am] = a.time.split(':').map(Number);
+        const [bh, bm] = b.time.split(':').map(Number);
+        return (ah * 60 + am) - (bh * 60 + bm);
+      })
+      .find((s) => {
+        const [h, m] = s.time.split(':').map(Number);
+        return (h * 60 + m) > currentMinutes;
+      });
+    
+    if (!nextSchedule) {
+      console.log('[Scheduler] No next schedule found');
+      notify('Tidak ada jadwal berikutnya', 'warning');
+      return;
+    }
+    
+    console.log('[Scheduler] Force playing:', nextSchedule.name);
+    const timeStr = nextSchedule.time;
+    const key = `${dateStr}|${timeStr}|${nextSchedule.id}`;
+    
+    await this.runBell(nextSchedule, nextSchedule.name, dateStr, timeStr, key);
+  }
+
+  // Reset executed logs untuk testing
+  async resetExecuted() {
+    console.log('[Scheduler] Resetting executed logs');
+    await db.executed.clear();
+    notify('Executed logs direset', 'success');
   }
 
   async refresh() {

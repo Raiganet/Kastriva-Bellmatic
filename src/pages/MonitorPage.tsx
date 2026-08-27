@@ -5,11 +5,18 @@ import { useClock } from '../hooks/useClock';
 import { useAppStore } from '../stores/useAppStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { Button } from '../components/ui/Button';
-import { Play, Pause, RefreshCw, Maximize, Minimize, Volume2, AlertTriangle } from 'lucide-react';
+import { Play, Pause, RefreshCw, Maximize, Minimize, Volume2, AlertTriangle, Bug, Trash2 } from 'lucide-react';
 import { dayOfWeekToKey, formatCountdown, formatDateID, pad, timeToMinutes, toISODate } from '../utils/time';
 import { getObjectUrl } from '../services/audioService';
 import { notify } from '../services/notificationService';
 import type { Schedule, SpecialSchedule } from '../types';
+
+// Import scheduler dari App
+let schedulerInstance: any = null;
+
+export function setSchedulerInstance(scheduler: any) {
+  schedulerInstance = scheduler;
+}
 
 export function MonitorPage() {
   const now = useClock(250);
@@ -84,10 +91,25 @@ export function MonitorPage() {
     setSchedulerActive(!s.schedulerEnabled);
   };
 
+  const forcePlayNext = async () => {
+    if (schedulerInstance) {
+      await schedulerInstance.forcePlayNext();
+    } else {
+      notify('Scheduler belum diinisialisasi', 'error');
+    }
+  };
+
+  const resetExecuted = async () => {
+    if (confirm('Reset semua executed logs? Ini akan memungkinkan jadwal dieksekusi ulang.')) {
+      if (schedulerInstance) {
+        await schedulerInstance.resetExecuted();
+      }
+    }
+  };
+
   return (
     <div className="min-h-[calc(100vh-8rem)] flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-4xl space-y-8 text-center">
-        {/* Big clock */}
         <div>
           <div className="font-mono font-bold text-7xl md:text-9xl text-primary-700 dark:text-primary-400 tracking-tight">
             {pad(now.getHours())}:{pad(now.getMinutes())}<span className="text-5xl md:text-7xl text-primary-500">:{pad(now.getSeconds())}</span>
@@ -97,7 +119,6 @@ export function MonitorPage() {
           </div>
         </div>
 
-        {/* Status */}
         <div className={`inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-medium ${
           audioUnlocked && schedulerActive
             ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
@@ -107,11 +128,10 @@ export function MonitorPage() {
           {audioUnlocked && schedulerActive ? 'SISTEM BEL AKTIF' : 'SISTEM BEL NONAKTIF'}
         </div>
 
-        {/* Next bell */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-lg border border-slate-200 dark:border-slate-700">
           {isHoliday ? (
             <>
-              <div className="text-5xl mb-3">🏖</div>
+              <div className="text-5xl mb-3"></div>
               <div className="text-sm text-slate-500">Hari ini</div>
               <div className="text-2xl font-bold">LIBUR</div>
               <div className="text-slate-500">{isHoliday.name}</div>
@@ -135,10 +155,15 @@ export function MonitorPage() {
           )}
         </div>
 
-        {/* Controls */}
         <div className="flex flex-wrap justify-center gap-2">
           <Button onClick={testBell} disabled={!audioUnlocked || !nextBell}>
             <Volume2 className="w-4 h-4" /> Tes Bel
+          </Button>
+          <Button variant="success" onClick={forcePlayNext} disabled={!audioUnlocked}>
+            <Play className="w-4 h-4" /> Force Play Next
+          </Button>
+          <Button variant="secondary" onClick={resetExecuted}>
+            <Trash2 className="w-4 h-4" /> Reset Executed
           </Button>
           <Button variant={schedulerActive ? 'danger' : 'success'} onClick={toggleScheduler}>
             {schedulerActive ? <><Pause className="w-4 h-4" /> Nonaktifkan</> : <><Play className="w-4 h-4" /> Aktifkan</>}
@@ -156,6 +181,17 @@ export function MonitorPage() {
             <AlertTriangle className="w-4 h-4" /> Audio belum diaktifkan. Klik "Aktifkan Sistem Bel" di layar utama.
           </div>
         )}
+
+        <div className="bg-sky-50 dark:bg-sky-900/20 rounded-lg p-4 text-left text-sm text-sky-800 dark:text-sky-300">
+          <h3 className="font-semibold mb-2">Debug Info:</h3>
+          <ul className="space-y-1 text-xs">
+            <li>• Hari ini: {dayKey} ({dateStr})</li>
+            <li>• Waktu sekarang: {pad(now.getHours())}:{pad(now.getMinutes())}</li>
+            <li>• Total jadwal: {schedules.length}</li>
+            <li>• Jadwal hari ini: {todaySchedule.length}</li>
+            <li>• Audio tersedia: {audios.length}</li>
+          </ul>
+        </div>
       </div>
     </div>
   );

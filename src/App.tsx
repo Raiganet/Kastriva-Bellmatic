@@ -7,7 +7,7 @@ import { CalendarPage } from './pages/CalendarPage';
 import { TemplatesPage } from './pages/TemplatesPage';
 import { HistoryPage } from './pages/HistoryPage';
 import { SettingsPage } from './pages/SettingsPage';
-import { MonitorPage } from './pages/MonitorPage';
+import { MonitorPage, setSchedulerInstance } from './pages/MonitorPage';
 import { TestBellPage } from './pages/TestBellPage';
 import { useAppStore } from './stores/useAppStore';
 import { useSettingsStore } from './stores/useSettingsStore';
@@ -22,6 +22,9 @@ const scheduler = new SchedulerService(
   () => useSettingsStore.getState().settings.volume,
 );
 
+// Pass scheduler instance to MonitorPage
+setSchedulerInstance(scheduler);
+
 export function App() {
   useTheme();
   const { page } = useAppStore();
@@ -32,7 +35,6 @@ export function App() {
     load();
   }, [load]);
 
-  // Start/stop scheduler based on audio unlock + settings
   useEffect(() => {
     if (audioUnlocked && settings.schedulerEnabled) {
       scheduler.start();
@@ -43,7 +45,6 @@ export function App() {
     }
   }, [audioUnlocked, settings.schedulerEnabled, setSchedulerActive]);
 
-  // Cleanup executed log > 7 hari untuk hemat storage
   useEffect(() => {
     const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
     db.executed.where('executedAt').below(cutoff).delete();
