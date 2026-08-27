@@ -21,23 +21,23 @@ export const DAY_LABEL: Record<DayOfWeek, string> = {
 
 export interface AudioFile {
   id: string;
-  name: string;           // nama file asli
-  displayName: string;    // nama tampilan
-  blob: Blob;             // file disimpan sebagai Blob
+  name: string;
+  displayName: string;
+  blob: Blob;
   mimeType: string;
   size: number;
-  duration: number;       // detik
+  duration: number;
   createdAt: number;
 }
 
 export interface Schedule {
   id: string;
-  name: string;           // nama kegiatan
-  days: DayOfWeek[];      // hari aktif
-  time: string;           // "HH:mm"
-  audioId: string;        // referensi ke AudioFile.id
+  name: string;
+  days: DayOfWeek[];
+  time: string;
+  audioId: string;
   enabled: boolean;
-  priority: number;       // 0=normal, 1=khusus, 2=sangat khusus
+  priority: number;
   notes?: string;
   createdAt: number;
 }
@@ -50,14 +50,14 @@ export interface SpecialSchedule {
   audioId: string;
   enabled: boolean;
   overrideNormal: boolean;
-  priority: number;       // <-- TAMBAHKAN BARIS INI
+  priority: number;
   notes?: string;
   createdAt: number;
 }
 
 export interface Holiday {
   id: string;
-  date: string;           // "YYYY-MM-DD"
+  date: string;
   name: string;
   enabled: boolean;
 }
@@ -66,8 +66,8 @@ export interface BellLog {
   id: string;
   scheduleId?: string;
   scheduleName: string;
-  date: string;           // "YYYY-MM-DD"
-  time: string;           // "HH:mm:ss"
+  date: string;
+  time: string;
   audioId?: string;
   audioName?: string;
   status: 'success' | 'skipped' | 'error';
@@ -80,10 +80,11 @@ export interface Settings {
   volume: number;         // 0-100
   fadeIn: number;         // ms
   fadeOut: number;        // ms
+  repeatCount: number;    // berapa kali bel diputar beruntun (1-5)
   autoStart: boolean;
   schedulerEnabled: boolean;
   theme: 'light' | 'dark' | 'system';
-  activeProfile: string;  // untuk multi-shift (future)
+  activeProfile: string;
 }
 
 export interface ScheduleTemplate {
@@ -99,7 +100,6 @@ export interface ScheduleTemplate {
 }
 
 export interface ExecutedBell {
-  // Anti-duplikasi: key = "YYYY-MM-DD|HH:mm|scheduleId"
   key: string;
   executedAt: number;
 }

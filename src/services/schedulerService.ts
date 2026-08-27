@@ -1,12 +1,11 @@
 import { db } from '../database/db';
 import type { Schedule, SpecialSchedule, BellLog, AudioFile } from '../types';
 import { dayOfWeekToKey, toISODate, pad, uid } from '../utils/time';
+import { playAudioRepeated } from './audioService';
 import { notify } from './notificationService';
 
 type PlayFn = (audio: AudioFile, volume: number) => Promise<HTMLAudioElement>;
 
-// PENTING: IndexedDB TIDAK bisa meng-index boolean!
-// Jadi kita cek enabled dengan helper ini (support true/1)
 function isEnabled(v: any): boolean {
   return v === true || v === 1;
 }
@@ -69,9 +68,6 @@ export class SchedulerService {
     const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
     const dayKey = dayOfWeekToKey(now);
 
-    console.log('[Scheduler] Evaluating:', { dateStr, timeStr, dayKey });
-
-    // FIX: Load semua lalu filter di JS (boolean tidak bisa di-index)
     const allHolidays = await db.holidays.toArray();
     const activeHoliday = allHolidays.find((h) => isEnabled(h.enabled) && h.date === dateStr);
     if (activeHoliday) {
@@ -79,31 +75,21 @@ export class SchedulerService {
       return;
     }
 
-    // Jadwal khusus
     const allSpecials = await db.specialSchedules.toArray();
     const specials = allSpecials.filter(
       (s) => isEnabled(s.enabled) && s.date === dateStr && s.time === timeStr
     );
 
-    console.log('[Scheduler] Special schedules found:', specials.length);
-
     for (const spec of specials) {
       const key = `${dateStr}|${spec.time}|${spec.id}`;
       const exists = await db.executed.get(key);
-      if (exists) {
-        console.log('[Scheduler] Special already executed:', key);
-        continue;
-      }
-      console.log('[Scheduler] Playing special:', spec.name);
+      if (exists) continue;
       await this.runBell(spec, spec.name, dateStr, timeStr, key);
       if (spec.overrideNormal) return;
     }
 
-    // Jadwal normal - FIX: filter di JS
     const allSchedules = await db.schedules.toArray();
     const enabledSchedules = allSchedules.filter((s) => isEnabled(s.enabled));
-
-    console.log('[Scheduler] Total schedules:', allSchedules.length, '| Enabled:', enabledSchedules.length);
 
     const candidates = enabledSchedules
       .filter((s) => s.days.includes(dayKey) && s.time === timeStr)
@@ -114,11 +100,7 @@ export class SchedulerService {
     for (const sch of candidates) {
       const key = `${dateStr}|${sch.time}|${sch.id}`;
       const exists = await db.executed.get(key);
-      if (exists) {
-        console.log('[Scheduler] Already executed:', key);
-        continue;
-      }
-      console.log('[Scheduler] 🎯 MATCH! Playing schedule:', sch.name);
+      if (exists) continue;
       await this.runBell(sch, sch.name, dateStr, timeStr, key);
     }
   }
@@ -130,8 +112,6 @@ export class SchedulerService {
     timeStr: string,
     key: string,
   ) {
-    console.log('[Scheduler] runBell:', name, 'audioId:', sch.audioId);
-
     const audio = await db.audio.get(sch.audioId);
 
     const logBase: Omit<BellLog, 'id'> = {
@@ -146,7 +126,6 @@ export class SchedulerService {
     };
 
     if (!audio) {
-      console.error('[Scheduler] Audio not found:', sch.audioId);
       const log: BellLog = { ...logBase, id: uid(), status: 'error', error: 'File audio tidak ditemukan' };
       await db.logs.add(log);
       notify(`⚠️ BEL GAGAL: ${name} (audio tidak ditemukan)`, 'error');
@@ -155,23 +134,26 @@ export class SchedulerService {
     }
 
     try {
+      const settings = await db.settings.get('settings');
+      const repeat = Math.max(1, Math.floor(settings?.repeatCount || 1));
       const volume = this.getVolume();
-      console.log('[Scheduler] Volume:', volume);
 
-      const el = await this.playAudio(audio, volume / 100);
+      console.log('[Scheduler] Playing:', name, '| volume:', volume, '| repeat:', repeat + 'x');
+
+      // BARU: putar beruntun sesuai repeatCount
+      const el = await playAudioRepeated(audio, volume / 100, repeat);
+
       await db.executed.put({ key, executedAt: Date.now() });
-
       const log: BellLog = { ...logBase, id: uid(), status: 'success' };
       await db.logs.add(log);
 
-      notify(`🔔 ${name} dimainkan`, 'success');
+      notify(`🔔 ${name} dimainkan (${repeat}x)`, 'success');
 
       el.addEventListener('ended', () => {
         console.log('[Scheduler] Bell finished:', name);
       });
     } catch (err: any) {
       console.error('[Scheduler] Error playing bell:', err);
-
       const log: BellLog = {
         ...logBase,
         id: uid(),
@@ -184,16 +166,13 @@ export class SchedulerService {
     }
   }
 
-  // Manual trigger untuk testing
   async forcePlayNext() {
-    console.log('[Scheduler] Force play next bell');
     const now = new Date();
     const dateStr = toISODate(now);
     const dayKey = dayOfWeekToKey(now);
 
     const allSchedules = await db.schedules.toArray();
     const schedules = allSchedules.filter((s) => isEnabled(s.enabled));
-
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
     const nextSchedule = schedules
@@ -209,21 +188,17 @@ export class SchedulerService {
       }) || schedules.find((s) => s.days.includes(dayKey));
 
     if (!nextSchedule) {
-      console.log('[Scheduler] No next schedule found');
       notify('Tidak ada jadwal untuk hari ini', 'warning');
       return;
     }
 
-    console.log('[Scheduler] Force playing:', nextSchedule.name);
     const key = `${dateStr}|${nextSchedule.time}|${nextSchedule.id}`;
     await this.runBell(nextSchedule, nextSchedule.name, dateStr, nextSchedule.time, key);
   }
 
-  // Reset executed logs untuk testing
   async resetExecuted() {
-    console.log('[Scheduler] Resetting executed logs');
     await db.executed.clear();
-    notify('Executed logs direset - jadwal bisa dieksekusi ulang', 'success');
+    notify('Executed logs direset', 'success');
   }
 
   async refresh() {

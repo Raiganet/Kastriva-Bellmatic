@@ -1,14 +1,17 @@
+import { useState } from 'react';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { Card, CardHeader, CardBody } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Download, Upload, Volume2, Moon, Sun, Monitor } from 'lucide-react';
+import { Badge } from '../components/ui/Badge';
+import { Download, Upload, Volume2, Moon, Sun, Monitor, Repeat, Info } from 'lucide-react';
 import { exportBackup, importBackup, downloadText } from '../services/backupService';
 import { notify } from '../services/notificationService';
-import { useState } from 'react';
 
 export function SettingsPage() {
   const { settings, update } = useSettingsStore();
   const [importing, setImporting] = useState(false);
+
+  const repeat = settings.repeatCount ?? 1;
 
   const doExport = async (includeAudio: boolean) => {
     try {
@@ -39,47 +42,92 @@ export function SettingsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-up">
       <div>
-        <h1 className="text-2xl font-bold">Pengaturan</h1>
-        <p className="text-sm text-slate-500">Konfigurasi sistem bel</p>
+        <div className="text-[11px] font-bold uppercase tracking-widest text-primary-600 dark:text-primary-400">
+          Sistem
+        </div>
+        <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">Pengaturan</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Konfigurasi sistem bel sekolah</p>
       </div>
 
-      <Card>
-        <CardHeader title="Audio" />
-        <CardBody className="space-y-4">
-          <div>
-            <label className="text-sm font-medium flex items-center gap-2">
-              <Volume2 className="w-4 h-4" /> Volume Bel: {settings.volume}%
-            </label>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              value={settings.volume}
-              onChange={(e) => update({ volume: Number(e.target.value) })}
-              className="w-full mt-2"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Audio */}
+        <Card>
+          <CardHeader title="Audio" subtitle="Volume & efek transisi" />
+          <CardBody className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Fade In (ms)</label>
-              <input type="number" value={settings.fadeIn} onChange={(e) => update({ fadeIn: Number(e.target.value) })}
-                className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900" />
+              <label className="text-sm font-semibold flex items-center gap-2">
+                <Volume2 className="w-4 h-4 text-primary-600" /> Volume Bel: {settings.volume}%
+              </label>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={settings.volume}
+                onChange={(e) => update({ volume: Number(e.target.value) })}
+                className="w-full mt-2"
+              />
             </div>
-            <div>
-              <label className="text-sm font-medium">Fade Out (ms)</label>
-              <input type="number" value={settings.fadeOut} onChange={(e) => update({ fadeOut: Number(e.target.value) })}
-                className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900" />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Fade In (ms)</label>
+                <input type="number" value={settings.fadeIn} onChange={(e) => update({ fadeIn: Number(e.target.value) })}
+                  className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Fade Out (ms)</label>
+                <input type="number" value={settings.fadeOut} onChange={(e) => update({ fadeOut: Number(e.target.value) })}
+                  className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800" />
+              </div>
             </div>
-          </div>
-        </CardBody>
-      </Card>
+          </CardBody>
+        </Card>
 
+        {/* BARU: Repeat */}
+        <Card>
+          <CardHeader title="Pemutaran Bel" subtitle="Durasi & pengulangan" />
+          <CardBody className="space-y-4">
+            <div>
+              <label className="text-sm font-semibold flex items-center gap-2">
+                <Repeat className="w-4 h-4 text-primary-600" /> Putar Bel Berulang
+              </label>
+              <div className="flex gap-2 mt-3">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => update({ repeatCount: n })}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold border transition-all ${
+                      repeat === n
+                        ? 'bg-gradient-to-r from-primary-600 to-indigo-600 text-white border-transparent shadow-pop'
+                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-primary-400'
+                    }`}
+                  >
+                    {n}x
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 flex items-start gap-2 p-3 rounded-xl bg-primary-50 dark:bg-primary-900/20 border border-primary-100 dark:border-primary-800">
+                <Info className="w-4 h-4 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-primary-800 dark:text-primary-300 leading-relaxed">
+                  Audio bel diputar beruntun sebanyak <b>{repeat}x</b> setiap jadwal tiba.
+                  Pilih nilai lebih besar untuk durasi bel yang lebih panjang tanpa mengganti file MP3.
+                </p>
+              </div>
+              <div className="mt-2">
+                <Badge variant="neutral">
+                  Estimasi durasi: {repeat}x durasi audio
+                </Badge>
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+      </div>
+
+      {/* Tampilan */}
       <Card>
-        <CardHeader title="Tampilan" />
+        <CardHeader title="Tampilan" subtitle="Mode tema aplikasi" />
         <CardBody>
-          <label className="text-sm font-medium mb-2 block">Tema</label>
           <div className="grid grid-cols-3 gap-2">
             {([
               { v: 'light', label: 'Light', icon: Sun },
@@ -89,10 +137,10 @@ export function SettingsPage() {
               <button
                 key={v}
                 onClick={() => update({ theme: v })}
-                className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-medium transition ${
+                className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl border text-sm font-semibold transition-all ${
                   settings.theme === v
-                    ? 'bg-primary-700 text-white border-primary-700'
-                    : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600'
+                    ? 'bg-gradient-to-r from-primary-600 to-indigo-600 text-white border-transparent shadow-pop'
+                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
                 }`}
               >
                 <Icon className="w-4 h-4" /> {label}
@@ -102,12 +150,13 @@ export function SettingsPage() {
         </CardBody>
       </Card>
 
+      {/* Backup */}
       <Card>
-        <CardHeader title="Backup & Restore" />
+        <CardHeader title="Backup & Restore" subtitle="Amankan data konfigurasi & audio" />
         <CardBody className="space-y-3">
-          <div className="text-xs text-slate-500">
-            <p>• <b>Export Config</b>: jadwal, pengaturan, kalender (tanpa file MP3)</p>
-            <p>• <b>Export Full</b>: termasuk file MP3 (ukuran file bisa besar)</p>
+          <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1">
+            <p>• <b>Export Config</b>: jadwal, pengaturan, kalender (tanpa MP3)</p>
+            <p>• <b>Export Full</b>: termasuk file MP3 (ukuran besar)</p>
             <p>• <b>Import</b>: restore dari file backup JSON</p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -117,8 +166,8 @@ export function SettingsPage() {
             <Button variant="secondary" onClick={() => doExport(true)}>
               <Download className="w-4 h-4" /> Export Full (+MP3)
             </Button>
-            <label className={`inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium rounded-lg cursor-pointer ${
-              importing ? 'bg-slate-300 text-slate-500' : 'bg-primary-700 hover:bg-primary-800 text-white'
+            <label className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl cursor-pointer transition ${
+              importing ? 'bg-slate-200 text-slate-400' : 'bg-gradient-to-r from-primary-600 to-indigo-600 text-white hover:opacity-90 shadow-pop'
             }`}>
               <Upload className="w-4 h-4" /> {importing ? 'Mengimport...' : 'Import Backup'}
               <input type="file" accept=".json" className="hidden" disabled={importing}
@@ -131,9 +180,9 @@ export function SettingsPage() {
       <Card>
         <CardHeader title="Tentang" />
         <CardBody className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
-          <div><b>Bell Sekolah Otomatis</b> v1.0.0</div>
-          <div>Tech: React + TypeScript + Vite + Tailwind + IndexedDB</div>
-          <div>Data disimpan lokal di browser (IndexedDB)</div>
+          <div><b>Kastriva Bellmatic</b> v1.0 — Enterprise Edition</div>
+          <div>React + TypeScript + Vite + Tailwind + IndexedDB</div>
+          <div>Data tersimpan 100% lokal • Offline ready • PWA</div>
         </CardBody>
       </Card>
     </div>

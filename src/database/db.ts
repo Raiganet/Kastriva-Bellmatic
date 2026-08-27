@@ -31,25 +31,22 @@ export class BellDB extends Dexie {
 
 export const db = new BellDB();
 
-// ============================================================
-// DEFAULT SETTINGS
-// ============================================================
 export const DEFAULT_SETTINGS: Settings = {
   id: 'settings',
   volume: 80,
   fadeIn: 200,
   fadeOut: 300,
+  repeatCount: 1,
   autoStart: true,
   schedulerEnabled: true,
   theme: 'light',
   activeProfile: 'default',
 };
 
+// Merge dengan default agar settings lama mendapat field baru (repeatCount)
 export async function ensureSettings(): Promise<Settings> {
   const existing = await db.settings.get('settings');
-  if (!existing) {
-    await db.settings.put(DEFAULT_SETTINGS);
-    return DEFAULT_SETTINGS;
-  }
-  return existing;
+  const merged: Settings = { ...DEFAULT_SETTINGS, ...(existing || {}) };
+  await db.settings.put(merged);
+  return merged;
 }
