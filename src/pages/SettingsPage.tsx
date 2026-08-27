@@ -3,15 +3,34 @@ import { useSettingsStore } from '../stores/useSettingsStore';
 import { Card, CardHeader, CardBody } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { Download, Upload, Volume2, Moon, Sun, Monitor, Repeat, Info } from 'lucide-react';
+import { Download, Upload, Volume2, Moon, Sun, Monitor, Repeat, Info, Copy, Check, LockKeyhole } from 'lucide-react';
 import { exportBackup, importBackup, downloadText } from '../services/backupService';
 import { notify } from '../services/notificationService';
+import { getDeviceCode, deactivate } from '../services/licenseService';
 
 export function SettingsPage() {
   const { settings, update } = useSettingsStore();
   const [importing, setImporting] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const repeat = settings.repeatCount ?? 1;
+  const deviceCode = getDeviceCode();
+
+  const copyDev = async () => {
+    try {
+      await navigator.clipboard.writeText(deviceCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+      notify('Kode perangkat disalin', 'success');
+    } catch {}
+  };
+
+  const relock = () => {
+    if (confirm('Kunci ulang aplikasi? Lisensi di perangkat ini akan dihapus dan aplikasi kembali ke layar aktivasi.')) {
+      deactivate();
+      location.reload();
+    }
+  };
 
   const doExport = async (includeAudio: boolean) => {
     try {
@@ -84,7 +103,7 @@ export function SettingsPage() {
           </CardBody>
         </Card>
 
-        {/* BARU: Repeat */}
+        {/* Repeat */}
         <Card>
           <CardHeader title="Pemutaran Bel" subtitle="Durasi & pengulangan" />
           <CardBody className="space-y-4">
@@ -111,18 +130,42 @@ export function SettingsPage() {
                 <Info className="w-4 h-4 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-primary-800 dark:text-primary-300 leading-relaxed">
                   Audio bel diputar beruntun sebanyak <b>{repeat}x</b> setiap jadwal tiba.
-                  Pilih nilai lebih besar untuk durasi bel yang lebih panjang tanpa mengganti file MP3.
+                  Pilih nilai lebih besar untuk durasi bel yang lebih panjang.
                 </p>
-              </div>
-              <div className="mt-2">
-                <Badge variant="neutral">
-                  Estimasi durasi: {repeat}x durasi audio
-                </Badge>
               </div>
             </div>
           </CardBody>
         </Card>
       </div>
+
+      {/* Lisensi */}
+      <Card>
+        <CardHeader title="Lisensi" subtitle="Status aktivasi & kode perangkat" />
+        <CardBody className="space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Kode Perangkat</div>
+              <div className="font-mono tabular text-2xl font-bold tracking-[0.3em] text-slate-900 dark:text-white">
+                {deviceCode}
+              </div>
+            </div>
+            <Badge variant="success">✅ TERAKTIVASI</Badge>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" size="sm" onClick={copyDev}>
+              {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              Salin Kode Perangkat
+            </Button>
+            <Button variant="danger" size="sm" onClick={relock}>
+              <LockKeyhole className="w-3.5 h-3.5" /> Kunci Ulang Aplikasi
+            </Button>
+          </div>
+          <p className="text-[11px] text-slate-400 leading-relaxed">
+            Lisensi terikat pada kode perangkat ini. "Kunci Ulang" berguna untuk uji coba
+            atau memindahkan lisensi ke perangkat lain.
+          </p>
+        </CardBody>
+      </Card>
 
       {/* Tampilan */}
       <Card>
@@ -180,7 +223,7 @@ export function SettingsPage() {
       <Card>
         <CardHeader title="Tentang" />
         <CardBody className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
-          <div><b>Kastriva Bellmatic</b> v1.0 — Enterprise Edition</div>
+          <div><b>Kastriva Bellmatic</b> v1.0 — Enterprise Edition • Licensed</div>
           <div>React + TypeScript + Vite + Tailwind + IndexedDB</div>
           <div>Data tersimpan 100% lokal • Offline ready • PWA</div>
         </CardBody>

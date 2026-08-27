@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Layout } from './components/Layout';
+import { LicenseGate } from './components/LicenseGate';
 import { Dashboard } from './pages/Dashboard';
 import { AudioPage } from './pages/AudioPage';
 import { SchedulesPage } from './pages/SchedulesPage';
@@ -22,7 +23,6 @@ const scheduler = new SchedulerService(
   () => useSettingsStore.getState().settings.volume,
 );
 
-// Pass scheduler instance to MonitorPage
 setSchedulerInstance(scheduler);
 
 export function App() {
@@ -65,5 +65,10 @@ export function App() {
     }
   };
 
-  return <Layout>{renderPage()}</Layout>;
+  // 🔐 APLIKASI TERKUNCI SAMPAI LISDI AKTIF
+  return (
+    <LicenseGate>
+      <Layout>{renderPage()}</Layout>
+    </LicenseGate>
+  );
 }
