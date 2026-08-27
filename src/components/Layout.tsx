@@ -13,26 +13,42 @@ export function Layout({ children }: { children: React.ReactNode }) {
     try {
       console.log('[Layout] Attempting to unlock audio...');
       
-      // Method 1: AudioContext
+      // Method: Gunakan AudioContext + Oscillator (paling reliable)
       const AC = (window.AudioContext || (window as any).webkitAudioContext);
-      if (AC) {
-        const ctx = new AC();
-        await ctx.resume();
-        console.log('[Layout] AudioContext resumed, state:', ctx.state);
+      if (!AC) {
+        throw new Error('Web Audio API tidak didukung browser ini');
       }
       
-      // Method 2: Play silent audio
-      const silent = new Audio('data:audio/wav;base64,UklGixAAAAABAAEARKwAAIhFQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=');
-      silent.volume = 0.01;
+      const ctx = new AC();
+      console.log('[Layout] AudioContext created, state:', ctx.state);
       
-      const playPromise = silent.play();
-      if (playPromise !== undefined) {
-        await playPromise;
-        console.log('[Layout] Silent audio played successfully');
-      }
+      // Buat oscillator silent (frequency sangat rendah, volume 0)
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      
+      oscillator.frequency.value = 0; // Silent
+      gainNode.gain.value = 0; // Volume 0
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      
+      oscillator.start();
+      console.log('[Layout] Oscillator started');
+      
+      // Stop setelah 100ms
+      setTimeout(() => {
+        oscillator.stop();
+        oscillator.disconnect();
+        gainNode.disconnect();
+        console.log('[Layout] Oscillator stopped');
+      }, 100);
+      
+      // Resume context (penting untuk mobile)
+      await ctx.resume();
+      console.log('[Layout] AudioContext resumed, state:', ctx.state);
       
       setAudioUnlocked(true);
-      console.log('[Layout] Audio unlocked!');
+      console.log('[Layout] Audio unlocked successfully!');
       
       // Cek audio di database
       const audioCount = await db.audio.count();
