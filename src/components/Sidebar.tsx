@@ -34,14 +34,16 @@ export function Sidebar() {
       >
         <div className="h-16 flex items-center justify-between px-5 border-b border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-lg bg-primary-700 flex items-center justify-center">
-              <Bell className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <div className="font-bold text-slate-900 dark:text-white">Bell Sekolah</div>
-              <div className="text-[10px] text-slate-500">Otomatis v1.0</div>
-            </div>
-          </div>
+  <img 
+    src="/icons/logo.png" 
+    alt="Kastriva Bellmatic" 
+    className="w-9 h-9 object-contain"
+  />
+  <div>
+    <div className="font-bold text-slate-900 dark:text-white">Kastriva Bellmatic</div>
+    <div className="text-[10px] text-slate-500">Sistem Bell Otomatis</div>
+  </div>
+</div>
           <button className="lg:hidden p-1" onClick={() => setSidebarOpen(false)}>
             <X className="w-5 h-5" />
           </button>

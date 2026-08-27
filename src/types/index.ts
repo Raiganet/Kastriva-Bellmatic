@@ -45,11 +45,12 @@ export interface Schedule {
 export interface SpecialSchedule {
   id: string;
   name: string;
-  date: string;           // "YYYY-MM-DD"
-  time: string;           // "HH:mm"
+  date: string;
+  time: string;
   audioId: string;
   enabled: boolean;
-  overrideNormal: boolean; // jika true, menonaktifkan jadwal normal di tanggal tsb
+  overrideNormal: boolean;
+  priority: number;       // <-- TAMBAHKAN BARIS INI
   notes?: string;
   createdAt: number;
 }

@@ -26,13 +26,14 @@ export class SchedulerService {
   start() {
     if (this.running) return;
     this.running = true;
+    console.log('[Scheduler] Started');
     this.tick();
-    // Tick setiap 250ms untuk akurasi detik, tapi eksekusi hanya sekali per menit
     this.timer = window.setInterval(() => this.tick(), 250);
   }
 
   stop() {
     this.running = false;
+    console.log('[Scheduler] Stopped');
     if (this.timer !== null) {
       clearInterval(this.timer);
       this.timer = null;
@@ -46,6 +47,7 @@ export class SchedulerService {
       const hm = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
       if (hm === this.lastTickMinute) return;
       this.lastTickMinute = hm;
+      console.log('[Scheduler] Tick:', hm);
       await this.evaluate(now);
     } catch (err) {
       console.error('[Scheduler] tick error', err);
@@ -54,34 +56,39 @@ export class SchedulerService {
 
   private async evaluate(now: Date) {
     const settings = await db.settings.get('settings');
-    if (!settings?.schedulerEnabled) return;
+    if (!settings?.schedulerEnabled) {
+      console.log('[Scheduler] Scheduler disabled');
+      return;
+    }
 
     const dateStr = toISODate(now);
     const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
     const dayKey = dayOfWeekToKey(now);
 
+    console.log('[Scheduler] Evaluating:', { dateStr, timeStr, dayKey });
+
     // Cek hari libur
     const holidays = await db.holidays.where('enabled').equals(1).toArray();
     const activeHoliday = holidays.find((h) => h.date === dateStr);
     if (activeHoliday) {
-      console.log('[Scheduler] Hari libur:', activeHoliday.name);
+      console.log('[Scheduler] Holiday today:', activeHoliday.name);
       return;
     }
 
-    // Cek jadwal khusus (priority tinggi)
+    // Cek jadwal khusus
     const specials = await db.specialSchedules
       .where('enabled').equals(1)
       .and((s) => s.date === dateStr && s.time === timeStr)
       .toArray();
 
-    let executed = false;
-
-    for (const spec of specials.sort((a, b) => b.priority - a.priority)) {
+    for (const spec of specials) {
       const key = `${dateStr}|${spec.time}|${spec.id}`;
       const exists = await db.executed.get(key);
-      if (exists) continue;
+      if (exists) {
+        console.log('[Scheduler] Special already executed:', key);
+        continue;
+      }
       await this.runBell(spec, spec.name, dateStr, timeStr, key);
-      executed = true;
       if (spec.overrideNormal) return;
     }
 
@@ -94,12 +101,16 @@ export class SchedulerService {
       .filter((s) => s.days.includes(dayKey) && s.time === timeStr)
       .sort((a, b) => b.priority - a.priority);
 
+    console.log('[Scheduler] Candidates for', timeStr, ':', candidates.length);
+
     for (const sch of candidates) {
       const key = `${dateStr}|${sch.time}|${sch.id}`;
       const exists = await db.executed.get(key);
-      if (exists) continue;
+      if (exists) {
+        console.log('[Scheduler] Already executed:', key);
+        continue;
+      }
       await this.runBell(sch, sch.name, dateStr, timeStr, key);
-      executed = true;
     }
   }
 
@@ -110,7 +121,10 @@ export class SchedulerService {
     timeStr: string,
     key: string,
   ) {
+    console.log('[Scheduler] runBell:', name, 'audioId:', sch.audioId);
+    
     const audio = await db.audio.get(sch.audioId);
+    
     const logBase: Omit<BellLog, 'id'> = {
       scheduleId: sch.id,
       scheduleName: name,
@@ -123,6 +137,7 @@ export class SchedulerService {
     };
 
     if (!audio) {
+      console.error('[Scheduler] Audio not found:', sch.audioId);
       const log: BellLog = { ...logBase, id: uid(), status: 'error', error: 'File audio tidak ditemukan' };
       await db.logs.add(log);
       notify(`⚠️ BEL GAGAL: ${name} (audio tidak ditemukan)`, 'error');
@@ -132,15 +147,22 @@ export class SchedulerService {
 
     try {
       const volume = this.getVolume();
+      console.log('[Scheduler] Volume:', volume);
+      
       const el = await this.playAudio(audio, volume / 100);
       await db.executed.put({ key, executedAt: Date.now() });
+      
       const log: BellLog = { ...logBase, id: uid(), status: 'success' };
       await db.logs.add(log);
-      notify(`🔔 ${name} dimainkan`, 'success');
+      
+      notify(` ${name} dimainkan`, 'success');
+      
       el.addEventListener('ended', () => {
-        console.log('[Scheduler] Bel selesai:', name);
+        console.log('[Scheduler] Bell finished:', name);
       });
     } catch (err: any) {
+      console.error('[Scheduler] Error playing bell:', err);
+      
       const log: BellLog = {
         ...logBase,
         id: uid(),

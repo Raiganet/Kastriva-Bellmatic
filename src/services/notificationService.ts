@@ -1,4 +1,4 @@
-type NotifType = 'success' | 'error' | 'info' | 'warning';
+type NotifType = 'success' | 'error' | 'info' | 'warning' | 'dismiss'; // <-- TAMBAHKAN 'dismiss'
 
 type Listener = (n: { id: string; message: string; type: NotifType; ts: number }) => void;
 const listeners = new Set<Listener>();

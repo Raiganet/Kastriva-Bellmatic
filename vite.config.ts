@@ -7,18 +7,19 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'icons/*.png'],
+      includeAssets: ['favicon.ico', 'icons/*.png'],
       manifest: {
-        name: 'Bell Sekolah Otomatis',
-        short_name: 'BellSekolah',
-        description: 'Sistem Bel Sekolah Otomatis',
+        name: 'Kastriva Bellmatic',
+        short_name: 'KastrivaBell',
+        description: 'Sistem Bell Sekolah Otomatis - Kastriva',
         theme_color: '#1e3a8a',
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'any',
+        start_url: '/',
         icons: [
-          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/icons/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/icons/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' },
         ],
       },
       workbox: {

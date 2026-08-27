@@ -4,23 +4,43 @@ import { ToastContainer } from './ui/Toast';
 import { useAppStore } from '../stores/useAppStore';
 import { Bell } from 'lucide-react';
 import { Button } from './ui/Button';
+import { db } from '../database/db';
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { audioUnlocked, setAudioUnlocked } = useAppStore();
 
   const unlockAudio = async () => {
     try {
-      // Inisialisasi AudioContext
+      console.log('[Layout] Attempting to unlock audio...');
+      
+      // Method 1: AudioContext
       const AC = (window.AudioContext || (window as any).webkitAudioContext);
-      const ctx = new AC();
-      await ctx.resume();
-      // Test play silent
+      if (AC) {
+        const ctx = new AC();
+        await ctx.resume();
+        console.log('[Layout] AudioContext resumed, state:', ctx.state);
+      }
+      
+      // Method 2: Play silent audio
       const silent = new Audio('data:audio/wav;base64,UklGixAAAAABAAEARKwAAIhFQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=');
       silent.volume = 0.01;
-      await silent.play().catch(() => {});
+      
+      const playPromise = silent.play();
+      if (playPromise !== undefined) {
+        await playPromise;
+        console.log('[Layout] Silent audio played successfully');
+      }
+      
       setAudioUnlocked(true);
-    } catch (e) {
-      console.error(e);
+      console.log('[Layout] Audio unlocked!');
+      
+      // Cek audio di database
+      const audioCount = await db.audio.count();
+      console.log('[Layout] Audio files in database:', audioCount);
+      
+    } catch (e: any) {
+      console.error('[Layout] Failed to unlock audio:', e);
+      alert('Gagal mengaktifkan audio: ' + (e?.message || 'Unknown error'));
     }
   };
 

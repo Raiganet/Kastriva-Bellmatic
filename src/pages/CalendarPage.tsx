@@ -20,7 +20,7 @@ export function CalendarPage() {
   const [specialModal, setSpecialModal] = useState(false);
   const [hForm, setHForm] = useState({ date: '', name: '', enabled: true });
   const [sForm, setSForm] = useState<Omit<SpecialSchedule, 'id' | 'createdAt'>>({
-    name: '', date: '', time: '07:00', audioId: '', enabled: true, overrideNormal: false, notes: '',
+    name: '', date: '', time: '07:00', audioId: '', enabled: true, overrideNormal: false, priority: 0, notes: '',
   });
 
   const audioMap = useMemo(() => new Map(audios.map((a) => [a.id, a])), [audios]);
