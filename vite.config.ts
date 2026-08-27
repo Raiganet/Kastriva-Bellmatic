@@ -7,24 +7,33 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'icons/*.png'],
-      manifest: {
-        name: 'Kastriva Bellmatic',
-        short_name: 'KastrivaBell',
-        description: 'Sistem Bell Sekolah Otomatis - Kastriva',
-        theme_color: '#1e3a8a',
-        background_color: '#ffffff',
-        display: 'standalone',
-        orientation: 'any',
-        start_url: '/',
-        icons: [
-          { src: '/icons/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icons/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' },
-        ],
-      },
+      includeAssets: ['favicon.ico', 'icons/*.png', 'manifest.webmanifest'],
+      // Manifest manual di public/manifest.webmanifest (single source of truth)
+      manifest: false,
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,mp3}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,webmanifest}'],
         maximumFileSizeToCacheInBytes: 50 * 1024 * 1024,
+        navigateFallback: '/index.html',
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-stylesheets',
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-webfonts',
+              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
       },
     }),
   ],

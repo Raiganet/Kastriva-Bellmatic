@@ -1,12 +1,14 @@
 import { useAppStore } from '../stores/useAppStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { useClock } from '../hooks/useClock';
-import { Menu, Bell as BellIcon, Moon, Sun } from 'lucide-react';
+import { usePwaInstall } from '../hooks/usePwaInstall';
+import { Menu, Moon, Sun, Download, CheckCircle2 } from 'lucide-react';
 import { formatTime } from '../utils/time';
 
 export function Topbar() {
   const { toggleSidebar, audioUnlocked, schedulerActive } = useAppStore();
   const { settings, update } = useSettingsStore();
+  const { canInstall, installed, install } = usePwaInstall();
   const now = useClock(1000);
 
   const toggleTheme = () => {
@@ -26,6 +28,30 @@ export function Topbar() {
       </div>
 
       <div className="flex items-center gap-2">
+        {canInstall && (
+          <>
+            <button
+              onClick={() => install()}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-primary-700 text-white hover:bg-primary-800 shadow-sm"
+            >
+              <Download className="w-3.5 h-3.5" /> Install Aplikasi
+            </button>
+            <button
+              onClick={() => install()}
+              className="sm:hidden p-2 rounded-lg bg-primary-700 text-white"
+              title="Install Aplikasi"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+          </>
+        )}
+
+        {installed && (
+          <span className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+            <CheckCircle2 className="w-3.5 h-3.5" /> App Terinstall
+          </span>
+        )}
+
         <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
           audioUnlocked && schedulerActive
             ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
