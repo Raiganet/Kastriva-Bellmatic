@@ -6,6 +6,7 @@
   font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 html, body, #root {
@@ -14,11 +15,22 @@ html, body, #root {
 
 body {
   margin: 0;
-  background: #f8fafc;
+  background: #f1f5f9;
 }
 
 .dark body {
   background: #020617;
+}
+
+/* Angka clock agar stabil (tidak goyang) */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Selection color */
+::selection {
+  background: #1d4ed8;
+  color: #fff;
 }
 
 /* Custom scrollbar */
@@ -31,10 +43,16 @@ body {
 }
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
-  border-radius: 4px;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 .dark ::-webkit-scrollbar-thumb {
   background: #334155;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
 }
 
 /* Animations */
@@ -65,7 +83,7 @@ input[type="range"] {
   appearance: none;
   height: 6px;
   background: #e2e8f0;
-  border-radius: 3px;
+  border-radius: 999px;
   outline: none;
 }
 .dark input[type="range"] {
@@ -78,13 +96,18 @@ input[type="range"]::-webkit-slider-thumb {
   height: 18px;
   border-radius: 50%;
   background: #1d4ed8;
+  border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgb(0 0 0 / .3);
   cursor: pointer;
+}
+.dark input[type="range"]::-webkit-slider-thumb {
+  border-color: #0f172a;
 }
 input[type="range"]::-moz-range-thumb {
   width: 18px;
   height: 18px;
   border-radius: 50%;
   background: #1d4ed8;
+  border: 3px solid #fff;
   cursor: pointer;
-  border: none;
 }

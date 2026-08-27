@@ -2,7 +2,11 @@ import { clsx } from 'clsx';
 
 export function Card({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
-    <div className={clsx('bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm', className)}>
+    <div className={clsx(
+      'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-card',
+      'transition-shadow hover:shadow-pop',
+      className,
+    )}>
       {children}
     </div>
   );
@@ -10,9 +14,9 @@ export function Card({ className, children }: { className?: string; children: Re
 
 export function CardHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: React.ReactNode }) {
   return (
-    <div className="flex items-start justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-700">
+    <div className="flex items-start justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800">
       <div>
-        <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">{title}</h3>
+        <h3 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight">{title}</h3>
         {subtitle && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>}
       </div>
       {action}
