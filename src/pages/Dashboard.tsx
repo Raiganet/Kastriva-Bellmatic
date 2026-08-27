@@ -9,7 +9,7 @@ import { Button } from '../components/ui/Button';
 import { Bell, Clock, Calendar as CalIcon, Music, Play, Pause, Square, AlertCircle } from 'lucide-react';
 import { dayOfWeekToKey, formatCountdown, formatDateID, formatHM, pad, timeToMinutes, toISODate } from '../utils/time';
 import type { Schedule, SpecialSchedule, AudioFile } from '../types';
-import { getObjectUrl } from '../services/audioService';
+import { getObjectUrl, playAudio } from '../services/audioService';
 import { notify } from '../services/notificationService';
 
 export function Dashboard() {
@@ -32,7 +32,6 @@ export function Dashboard() {
 
   const isHoliday = useMemo(() => holidays.find((h) => h.enabled && h.date === dateStr), [holidays, dateStr]);
 
-  // Jadwal hari ini (normal + khusus)
   const todaySchedule = useMemo(() => {
     const normal = schedules
       .filter((s) => s.enabled && s.days.includes(dayKey))
@@ -57,7 +56,6 @@ export function Dashboard() {
 
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-  // Tentukan jadwal berikutnya
   const nextBell = useMemo(() => {
     return todaySchedule.find((s) => timeToMinutes(s._time) > currentMinutes) || todaySchedule[0];
   }, [todaySchedule, currentMinutes]);
@@ -83,20 +81,22 @@ export function Dashboard() {
       notify('Audio belum diaktifkan', 'warning');
       return;
     }
+    
+    console.log('[Dashboard] Test play:', sch.name, 'audio:', audio.displayName);
+    
     try {
       if (player) {
         player.pause();
         player.currentTime = 0;
       }
-      const url = getObjectUrl(audio);
-      const el = new Audio(url);
-      el.volume = 0.8;
-      await el.play();
+      const el = await playAudio(audio, 0.8);
       setPlayer(el);
       setPlaying(true);
+      notify('🔔 Test: ' + sch.name, 'success');
       el.addEventListener('ended', () => setPlaying(false));
     } catch (e: any) {
-      notify('Gagal memutar audio: ' + (e?.message || ''), 'error');
+      console.error('[Dashboard] Test play failed:', e);
+      notify('Gagal: ' + (e?.message || ''), 'error');
     }
   };
 
@@ -110,11 +110,10 @@ export function Dashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Dashboard</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">Ringkasan sistem bel sekolah</p>
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <p className="text-sm text-slate-500">Ringkasan sistem bel sekolah</p>
       </div>
 
-      {/* Status Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardBody className="flex items-center gap-3">
@@ -173,14 +172,13 @@ export function Dashboard() {
         </Card>
       </div>
 
-      {/* Next Bell + Controls */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2">
           <CardHeader title="Bel Berikutnya" subtitle={isHoliday ? '🏖 Hari ini libur: ' + isHoliday.name : undefined} />
           <CardBody>
             {isHoliday ? (
               <div className="text-center py-8">
-                <div className="text-5xl mb-3">🏖</div>
+                <div className="text-5xl mb-3"></div>
                 <div className="text-lg font-semibold">Hari Libur</div>
                 <div className="text-sm text-slate-500">{isHoliday.name}</div>
               </div>
@@ -237,7 +235,6 @@ export function Dashboard() {
         </Card>
       </div>
 
-      {/* Today Schedule */}
       <Card>
         <CardHeader title="Jadwal Hari Ini" subtitle={`${todaySchedule.length} jadwal`} />
         <div className="overflow-x-auto">
@@ -303,7 +300,6 @@ export function Dashboard() {
         </div>
       </Card>
 
-      {/* Recent Logs */}
       <Card>
         <CardHeader title="Log Hari Ini" />
         <div className="divide-y divide-slate-200 dark:divide-slate-700">
